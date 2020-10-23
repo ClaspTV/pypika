@@ -18,18 +18,29 @@ class DistinctOptionFunction(AggregateFunction):
         alias = kwargs.get("alias")
         super(DistinctOptionFunction, self).__init__(name, *args, alias=alias)
         self._distinct = False
+        self._delimit = None
 
     def get_function_sql(self, **kwargs):
         s = super(DistinctOptionFunction, self).get_function_sql(**kwargs)
 
+        result = s
         n = len(self.name) + 1
         if self._distinct:
-            return s[:n] + "DISTINCT " + s[n:]
-        return s
+            result = s[:n] + 'DISTINCT ' + s[n:]
+
+        n = len(result)
+        if self._delimit is not None:
+            result = result[:n - 1] + ', \'' + self._delimit + '\'' + result[n - 1:]
+
+        return result
 
     @builder
     def distinct(self):
         self._distinct = True
+
+    @builder
+    def delimiter(self, delimit):
+        self._delimit = delimit
 
 
 class Count(DistinctOptionFunction):
@@ -37,6 +48,9 @@ class Count(DistinctOptionFunction):
         is_star = isinstance(param, str) and "*" == param
         super(Count, self).__init__("COUNT", Star() if is_star else param, alias=alias)
 
+class ListAgg(DistinctOptionFunction):
+    def __init__(self, term, alias=None):
+        super(ListAgg, self).__init__('LISTAGG', term, alias=alias)
 
 # Arithmetic Functions
 class Sum(DistinctOptionFunction):

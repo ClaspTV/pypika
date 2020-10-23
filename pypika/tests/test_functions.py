@@ -23,6 +23,13 @@ class FunctionTests(unittest.TestCase):
         func = fn.Function("func", ["a"], ["b"])
         self.assertEqual("func(ARRAY['a'],ARRAY['b'])", func.get_sql(dialect=Dialects.POSTGRESQL))
 
+    def test_delimiter_addition_to_aggregate_function(self):
+        func = fn.ListAgg("event").distinct().delimiter(delimit=',')
+        self.assertEqual("LISTAGG(DISTINCT \'event\', \',\')", func.get_sql(dialect=Dialects.POSTGRESQL))
+
+        func = fn.ListAgg("event").distinct()
+        self.assertEqual("LISTAGG(DISTINCT \'event\')", func.get_sql(dialect=Dialects.POSTGRESQL))
+
     def test_is_aggregate_None_for_non_aggregate_function_or_function_with_no_aggregate_functions(self):
         self.assertIsNone(fn.Coalesce('a', 0).is_aggregate)
         self.assertIsNone(fn.Coalesce(fn.NullIf('a', 0), 0).is_aggregate)
@@ -259,6 +266,16 @@ class AggregationTests(unittest.TestCase):
         q = Q.from_("abc").select(fn.Count("*"))
 
         self.assertEqual('SELECT COUNT(*) FROM "abc"', str(q))
+
+    def test_list_agg(self):
+        q = Q.from_("abc").select(fn.ListAgg("foo"))
+
+        self.assertEqual('SELECT LISTAGG(\'foo\') FROM "abc"', str(q))
+
+    def test_list_agg_with_distinct(self):
+        q = Q.from_("abc").select(fn.ListAgg("foo").distinct())
+
+        self.assertEqual('SELECT LISTAGG(DISTINCT \'foo\') FROM "abc"', str(q))
 
     def test__sum(self):
         q = Q.from_("abc").select(fn.Sum(F("foo")))
