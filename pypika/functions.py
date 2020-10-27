@@ -18,11 +18,14 @@ class DistinctOptionFunction(AggregateFunction):
         alias = kwargs.get("alias")
         super(DistinctOptionFunction, self).__init__(name, *args, alias=alias)
         self._distinct = False
+        # Adding delimit variable to define the delimiter value
         self._delimit = None
 
     def get_function_sql(self, **kwargs):
         s = super(DistinctOptionFunction, self).get_function_sql(**kwargs)
 
+        # Storing the sql script result to result variable for adding other static keywords like DISTINCT
+        # and add delimiter to the existing aggregate function
         result = s
         n = len(self.name) + 1
         if self._distinct:
@@ -38,6 +41,7 @@ class DistinctOptionFunction(AggregateFunction):
     def distinct(self):
         self._distinct = True
 
+    # delimiter function assigns the delimiter value to the aggregate function
     @builder
     def delimiter(self, delimit):
         self._delimit = delimit
@@ -48,6 +52,8 @@ class Count(DistinctOptionFunction):
         is_star = isinstance(param, str) and "*" == param
         super(Count, self).__init__("COUNT", Star() if is_star else param, alias=alias)
 
+# Creating a new ListAgg function class to bring in LISTAGG function as an additional aggregate function to the already
+# existing list
 class ListAgg(DistinctOptionFunction):
     def __init__(self, term, alias=None):
         super(ListAgg, self).__init__('LISTAGG', term, alias=alias)
